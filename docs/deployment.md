@@ -47,7 +47,8 @@ Create one Vercel project for the backend.
 - Import the same GitHub repo.
 - Set Root Directory to `apps/api`.
 - Use the included `apps/api/vercel.json`.
-- The FastAPI entrypoint is `apps/api/app.py`.
+- The Vercel serverless entrypoint is `apps/api/api/index.py`.
+- Local development still uses `china_outbound_analyzer.main:app` with Uvicorn.
 - Production cron jobs are defined in `apps/api/vercel.json`.
 
 Backend environment variables:

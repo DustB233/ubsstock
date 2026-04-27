@@ -19,7 +19,8 @@ FastAPI backend for the China Outbound Stock AI Analyzer.
 
 Deploy this directory as the backend Vercel project with Root Directory `apps/api`.
 
-- Entrypoint: `app.py`
+- Vercel serverless entrypoint: `api/index.py`
+- Local Uvicorn app: `china_outbound_analyzer.main:app`
 - Config: `vercel.json`
 - Runtime dependencies: `requirements.txt`
 - Production refresh: Vercel Hobby-safe Cron Jobs hitting `/api/v1/cron/hobby-data-refresh` and `/api/v1/cron/hobby-analysis`
