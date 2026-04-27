@@ -36,8 +36,13 @@ def get_async_engine():
 def get_sync_engine():
     try:
         settings = get_settings()
-        _log_database_url("sync", settings.sync_database_url)
-        return create_engine(settings.sync_database_url, pool_pre_ping=True)
+        connect_args = sync_engine_connect_args(settings.sync_database_url)
+        _log_database_url("sync", settings.sync_database_url, connect_args=connect_args)
+        return create_engine(
+            settings.sync_database_url,
+            pool_pre_ping=True,
+            connect_args=connect_args,
+        )
     except Exception as exc:  # pragma: no cover - exact provider errors vary by runtime
         logger.exception("Sync database engine configuration failed.")
         raise DatabaseUnavailableError("Sync database engine could not be configured.") from exc
@@ -66,16 +71,39 @@ def get_sync_session() -> Session:
     return get_sync_sessionmaker()()
 
 
-def _log_database_url(kind: str, value: str) -> None:
+def sync_engine_connect_args(value: str) -> dict[str, Any]:
+    try:
+        url = make_url(value)
+    except Exception:
+        return {}
+
+    if url.drivername == "postgresql+psycopg":
+        return {"prepare_threshold": None}
+
+    return {}
+
+
+def _log_database_url(kind: str, value: str, *, connect_args: dict[str, Any] | None = None) -> None:
     metadata = _safe_database_url_metadata(value)
+    prepared_statements = (
+        "disabled"
+        if connect_args is not None
+        and "prepare_threshold" in connect_args
+        and connect_args["prepare_threshold"] is None
+        else "driver-default"
+    )
     logger.info(
-        "Configuring %s database engine driver=%s host=%s port=%s database=%s ssl=%s",
+        (
+            "Configuring %s database engine driver=%s host=%s port=%s "
+            "database=%s ssl=%s prepared_statements=%s"
+        ),
         kind,
         metadata["driver"],
         metadata["host"],
         metadata["port"],
         metadata["database"],
         metadata["ssl"],
+        prepared_statements,
     )
 
 

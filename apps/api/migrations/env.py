@@ -6,6 +6,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from china_outbound_analyzer.core.config import get_settings
+from china_outbound_analyzer.core.database import sync_engine_connect_args
 from china_outbound_analyzer.models import Base
 
 config = context.config
@@ -36,6 +37,7 @@ def run_migrations_online() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=sync_engine_connect_args(settings.sync_database_url),
     )
 
     with connectable.connect() as connection:

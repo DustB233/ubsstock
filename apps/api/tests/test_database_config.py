@@ -7,6 +7,7 @@ from china_outbound_analyzer.core.database import (
     get_async_sessionmaker,
     get_sync_engine,
     get_sync_sessionmaker,
+    sync_engine_connect_args,
 )
 
 
@@ -74,8 +75,50 @@ def test_database_url_logging_is_masked(monkeypatch, caplog) -> None:
     assert "driver=postgresql+psycopg" in caplog.text
     assert "host=db.example.supabase.co" in caplog.text
     assert "ssl=require" in caplog.text
+    assert "prepared_statements=disabled" in caplog.text
     engine.dispose()
     _clear_database_caches()
+
+
+def test_sync_engine_disables_prepared_statements_for_supabase_pooler(monkeypatch) -> None:
+    _clear_database_caches()
+    captured: dict[str, object] = {}
+    pooler_url = (
+        "postgresql+psycopg://postgres.zcxhfxcmbqbnrisevsaw:pass@"
+        "aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require"
+    )
+    monkeypatch.setenv("SYNC_DATABASE_URL", pooler_url)
+
+    def fake_create_engine(url: str, **kwargs):
+        captured["url"] = url
+        captured["kwargs"] = kwargs
+
+        class FakeEngine:
+            def dispose(self) -> None:
+                return None
+
+        return FakeEngine()
+
+    monkeypatch.setattr("china_outbound_analyzer.core.database.create_engine", fake_create_engine)
+
+    engine = get_sync_engine()
+
+    assert engine is not None
+    assert captured["url"].startswith("postgresql+psycopg://")
+    assert captured["kwargs"] == {
+        "pool_pre_ping": True,
+        "connect_args": {"prepare_threshold": None},
+    }
+    _clear_database_caches()
+
+
+def test_sync_engine_connect_args_disable_psycopg_prepared_statements() -> None:
+    pooler_url = (
+        "postgresql+psycopg://postgres.zcxhfxcmbqbnrisevsaw:pass@"
+        "aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require"
+    )
+
+    assert sync_engine_connect_args(pooler_url) == {"prepare_threshold": None}
 
 
 def test_safe_database_url_metadata_never_returns_password() -> None:
