@@ -8,11 +8,11 @@
   ],
   "crons": [
     {
-      "path": "/api/v1/cron/hobby-data-refresh",
+      "path": "/api/v1/cron/daily-refresh",
       "schedule": "30 10 * * *"
     },
     {
-      "path": "/api/v1/cron/hobby-analysis",
+      "path": "/api/v1/cron/fundamentals-analyze-score",
       "schedule": "30 11 * * *"
     }
   ]

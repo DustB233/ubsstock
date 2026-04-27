@@ -23,7 +23,7 @@ Deploy this directory as the backend Vercel project with Root Directory `apps/ap
 - Local Uvicorn app: `china_outbound_analyzer.main:app`
 - Config: `vercel.json`
 - Runtime dependencies: `requirements.txt`
-- Production refresh: Vercel Hobby-safe Cron Jobs hitting `/api/v1/cron/hobby-data-refresh` and `/api/v1/cron/hobby-analysis`
+- Production refresh: Vercel Hobby-safe Cron Jobs configured in `vercel.json` for `/api/v1/cron/daily-refresh` and `/api/v1/cron/fundamentals-analyze-score`
 
 Required production env vars:
 

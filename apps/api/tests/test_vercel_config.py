@@ -14,10 +14,26 @@ def test_vercel_config_uses_auto_detected_python_function() -> None:
     assert config["rewrites"] == [{"source": "/(.*)", "destination": "/api/index.py"}]
     assert (API_ROOT / "api" / "index.py").is_file()
     assert len(config.get("crons", [])) <= 2
-    assert {cron["path"] for cron in config["crons"]} == {
-        "/api/v1/cron/hobby-data-refresh",
-        "/api/v1/cron/hobby-analysis",
+    assert config["crons"] == [
+        {"path": "/api/v1/cron/daily-refresh", "schedule": "30 10 * * *"},
+        {"path": "/api/v1/cron/fundamentals-analyze-score", "schedule": "30 11 * * *"},
+    ]
+
+
+def test_vercel_cron_paths_are_get_routes() -> None:
+    if str(API_ROOT) not in sys.path:
+        sys.path.insert(0, str(API_ROOT))
+
+    from api.index import app
+
+    route_methods_by_path = {
+        route.path: route.methods for route in app.routes if route.path.startswith("/api/v1/cron/")
     }
+
+    for cron in json.loads((API_ROOT / "vercel.json").read_text())["crons"]:
+        methods = route_methods_by_path[cron["path"]]
+        assert "GET" in methods
+        assert "POST" not in methods
 
 
 def test_vercel_serverless_entrypoint_exports_fastapi_app() -> None:
