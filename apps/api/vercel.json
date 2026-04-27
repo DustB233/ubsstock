@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ],
+  "functions": {
+    "app.py": {
+      "maxDuration": 800
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/v1/cron/daily-refresh",
+      "schedule": "30 10 * * 1-5"
+    },
+    {
+      "path": "/api/v1/cron/fundamentals",
+      "schedule": "15 11 * * *"
+    },
+    {
+      "path": "/api/v1/cron/analyze-score",
+      "schedule": "0 12 * * *"
+    }
+  ]
+}

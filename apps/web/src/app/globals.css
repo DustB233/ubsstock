@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+:root {
+  --font-display: var(--font-newsreader);
+  --font-body: var(--font-ibm-plex);
+  --font-mono: var(--font-jetbrains-mono);
+  --color-panel: rgba(255, 255, 255, 0.06);
+  --color-panel-strong: rgba(255, 255, 255, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #07111f;
+  color: #f8fafc;
+  font-family: var(--font-body), serif;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display), serif;
+}
+
+code,
+pre {
+  font-family: var(--font-mono), monospace;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
