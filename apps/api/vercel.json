@@ -6,11 +6,6 @@
       "destination": "/api/index.py"
     }
   ],
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 300
-    }
-  },
   "crons": [
     {
       "path": "/api/v1/cron/hobby-data-refresh",

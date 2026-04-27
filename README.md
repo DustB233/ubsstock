@@ -152,7 +152,7 @@ This repo is designed for two Vercel projects from the same GitHub monorepo:
 - Frontend project Root Directory: `apps/web`
 - Backend project Root Directory: `apps/api`
 
-Production refresh is handled by Vercel Cron Jobs against protected FastAPI cron endpoints. The default `apps/api/vercel.json` stays within Vercel Hobby constraints by capping `maxDuration` at 300 seconds and scheduling two small rotating/batched cron routes instead of one long all-in-one refresh. The local scheduler is still available for local development, but production does not depend on an always-on process.
+Production refresh is handled by Vercel Cron Jobs against protected FastAPI cron endpoints. The default `apps/api/vercel.json` stays deploy-first for Vercel Hobby by letting Vercel auto-detect the Python function at `apps/api/api/index.py` and scheduling two small rotating/batched cron routes instead of one long all-in-one refresh. The local scheduler is still available for local development, but production does not depend on an always-on process.
 
 See [docs/deployment.md](docs/deployment.md) for the full GitHub publishing checklist, Vercel environment variables, cron schedules, and deployment steps.
 

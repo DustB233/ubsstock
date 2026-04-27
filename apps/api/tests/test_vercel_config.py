@@ -5,20 +5,19 @@ from pathlib import Path
 API_ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_vercel_config_is_hobby_safe() -> None:
+def test_vercel_config_uses_auto_detected_python_function() -> None:
     config = json.loads((API_ROOT / "vercel.json").read_text())
 
     assert "builds" not in config
+    assert "functions" not in config
+    assert "maxDuration" not in json.dumps(config)
     assert config["rewrites"] == [{"source": "/(.*)", "destination": "/api/index.py"}]
-    assert set(config.get("functions", {})) == {"api/index.py"}
+    assert (API_ROOT / "api" / "index.py").is_file()
     assert len(config.get("crons", [])) <= 2
     assert {cron["path"] for cron in config["crons"]} == {
         "/api/v1/cron/hobby-data-refresh",
         "/api/v1/cron/hobby-analysis",
     }
-
-    for function_config in config.get("functions", {}).values():
-        assert 1 <= function_config["maxDuration"] <= 300
 
 
 def test_vercel_serverless_entrypoint_exports_fastapi_app() -> None:

@@ -106,9 +106,9 @@ The production frontend intentionally does not fall back to localhost. If these 
 
 ## 4. Vercel Cron Jobs
 
-The backend project is configured for Vercel Hobby limits by default:
+The backend project is configured for Vercel Hobby deployment by default:
 
-- `maxDuration` is capped at `300` seconds in `apps/api/vercel.json`.
+- `apps/api/vercel.json` does not declare `builds`, `functions`, or `maxDuration`; Vercel auto-detects `apps/api/api/index.py` as the Python serverless function.
 - Only two cron schedules are defined, which keeps the project within the Hobby cron-job limit.
 - Long workflows are split into rotating/batched endpoints instead of one oversized function invocation.
 
