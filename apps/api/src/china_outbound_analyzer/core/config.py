@@ -1,6 +1,7 @@
 import json
 from functools import lru_cache
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import AliasChoices, Field
 from pydantic.functional_validators import field_validator
@@ -20,9 +21,31 @@ def _normalize_postgres_url(value: str, *, async_driver: bool) -> str:
         "postgresql+psycopg2://",
     ):
         if normalized.startswith(prefix):
-            return driver + normalized.removeprefix(prefix)
+            normalized = driver + normalized.removeprefix(prefix)
+            break
+
+    if async_driver:
+        normalized = _normalize_asyncpg_ssl_query(normalized)
 
     return normalized
+
+
+def _normalize_asyncpg_ssl_query(value: str) -> str:
+    parts = urlsplit(value)
+    query_items = parse_qsl(parts.query, keep_blank_values=True)
+    if not any(key == "sslmode" for key, _ in query_items):
+        return value
+
+    has_ssl = any(key == "ssl" for key, _ in query_items)
+    rewritten_query: list[tuple[str, str]] = []
+    for key, item_value in query_items:
+        if key == "sslmode":
+            if not has_ssl:
+                rewritten_query.append(("ssl", item_value))
+            continue
+        rewritten_query.append((key, item_value))
+
+    return urlunsplit(parts._replace(query=urlencode(rewritten_query)))
 
 
 class Settings(BaseSettings):
@@ -106,10 +129,13 @@ class Settings(BaseSettings):
             if not stripped:
                 return []
             if stripped.startswith("["):
-                parsed = json.loads(stripped)
-                if not isinstance(parsed, list):
-                    raise ValueError("CORS_ORIGINS JSON value must be a list.")
-                return [str(item) for item in parsed]
+                try:
+                    parsed = json.loads(stripped)
+                except json.JSONDecodeError:
+                    return [stripped]
+                if isinstance(parsed, list):
+                    return [str(item) for item in parsed]
+                return [stripped]
             return [item.strip() for item in stripped.split(",") if item.strip()]
         return value
 

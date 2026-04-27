@@ -56,7 +56,7 @@ Backend environment variables:
 ```env
 APP_ENV=production
 DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST:PORT/DB?ssl=require
-SYNC_DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:PORT/DB?ssl=require
+SYNC_DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:PORT/DB?sslmode=require
 CORS_ORIGINS=https://your-web-project.vercel.app
 CRON_SECRET=replace-with-a-long-random-secret
 OPENAI_API_KEY=replace-with-your-openai-key
@@ -83,7 +83,14 @@ CRON_AI_BATCH_SIZE=3
 SCHEDULER_RUNNING_JOB_STALE_AFTER_SECONDS=7200
 ```
 
-If your Postgres provider only gives a `postgres://` or `postgresql://` URL, the backend normalizes it internally when possible, but the explicit SQLAlchemy driver URLs above are the clearest production setup.
+If your Postgres provider only gives a `postgres://` or `postgresql://` URL with `sslmode=require`, the backend normalizes it internally for both asyncpg and psycopg. The explicit SQLAlchemy driver URLs above are still the clearest production setup.
+
+Runtime smoke checks after deployment:
+
+- `https://your-api-project.vercel.app/`
+- `https://your-api-project.vercel.app/api/v1/health`
+
+These health routes do not connect to Postgres. They should return JSON even if database-backed endpoints still need environment fixes.
 
 ## 3. Frontend Vercel Project
 

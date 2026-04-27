@@ -13,7 +13,7 @@ from china_outbound_analyzer.api.v1.endpoints import admin as admin_endpoint
 from china_outbound_analyzer.api.v1.endpoints import compare as compare_endpoint
 from china_outbound_analyzer.api.v1.endpoints import recommendations as recommendations_endpoint
 from china_outbound_analyzer.api.v1.endpoints import stocks as stocks_endpoint
-from china_outbound_analyzer.core.database import Base
+from china_outbound_analyzer.core.database import Base, DatabaseUnavailableError
 from china_outbound_analyzer.main import app
 from china_outbound_analyzer.models.entities import (
     AIArtifact,
@@ -744,7 +744,32 @@ def test_healthcheck() -> None:
     response = client.get("/api/v1/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["service"] == "China Outbound Stock AI Analyzer API"
+    assert payload["settings_loaded"] is True
+    assert payload["router_loaded"] is True
+
+
+def test_root_health_shell() -> None:
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.json()["service"] == "China Outbound Stock AI Analyzer API"
+
+
+def test_database_unavailable_returns_json_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _raise_database_error():
+        raise DatabaseUnavailableError("bad database config")
+
+    monkeypatch.setattr(stocks_endpoint, "get_sync_session", _raise_database_error)
+
+    response = client.get("/api/v1/stocks")
+
+    assert response.status_code == 503
+    payload = response.json()
+    assert payload["type"] == "database_unavailable"
+    assert payload["detail"] == "Database is unavailable or misconfigured."
 
 
 def test_dashboard_preview_contains_all_universe_members() -> None:
