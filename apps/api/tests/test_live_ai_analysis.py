@@ -435,6 +435,34 @@ async def test_live_ai_analysis_service_falls_back_to_heuristic_when_generator_f
 
 
 @pytest.mark.asyncio
+async def test_live_ai_analysis_service_can_process_stock_slug_batch() -> None:
+    engine, session_factory = _session_factory()
+
+    with session_factory() as session:
+        _seed_stock_inputs(session)
+        session.commit()
+
+        service = LiveAIAnalysisService(
+            session,
+            settings=Settings(ai_analysis_provider="openai"),
+            analysis_generator=_StubLiveGenerator(),
+            fallback_generator=HeuristicNarrativeGenerator(),
+        )
+        result = await service.run(stock_slugs=["missing-stock", "catl"])
+
+        thesis_count = session.scalars(
+            select(AIArtifact).where(AIArtifact.artifact_type == AIArtifactType.THESIS_SUMMARY)
+        ).all()
+
+        assert result["status"] == "SUCCESS"
+        assert result["requested_symbols"] == 2
+        assert result["symbols"] == 1
+        assert len(thesis_count) == 1
+
+    engine.dispose()
+
+
+@pytest.mark.asyncio
 async def test_live_ai_analysis_service_ignores_spurious_model_missing_inputs() -> None:
     engine, session_factory = _session_factory()
 

@@ -8,21 +8,17 @@
   ],
   "functions": {
     "app.py": {
-      "maxDuration": 800
+      "maxDuration": 300
     }
   },
   "crons": [
     {
-      "path": "/api/v1/cron/daily-refresh",
-      "schedule": "30 10 * * 1-5"
+      "path": "/api/v1/cron/hobby-data-refresh",
+      "schedule": "30 10 * * *"
     },
     {
-      "path": "/api/v1/cron/fundamentals",
-      "schedule": "15 11 * * *"
-    },
-    {
-      "path": "/api/v1/cron/analyze-score",
-      "schedule": "0 12 * * *"
+      "path": "/api/v1/cron/hobby-analysis",
+      "schedule": "30 11 * * *"
     }
   ]
 }

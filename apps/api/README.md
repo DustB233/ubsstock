@@ -22,7 +22,7 @@ Deploy this directory as the backend Vercel project with Root Directory `apps/ap
 - Entrypoint: `app.py`
 - Config: `vercel.json`
 - Runtime dependencies: `requirements.txt`
-- Production refresh: Vercel Cron Jobs hitting `/api/v1/cron/*`
+- Production refresh: Vercel Hobby-safe Cron Jobs hitting `/api/v1/cron/hobby-data-refresh` and `/api/v1/cron/hobby-analysis`
 
 Required production env vars:
 

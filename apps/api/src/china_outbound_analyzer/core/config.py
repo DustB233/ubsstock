@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     cron_news_limit: int = 10
     cron_announcements_limit: int = 12
     cron_announcements_lookback_days: int = 365
+    cron_ai_batch_size: int = 3
     price_data_provider: str = "yahoo_finance"
     price_request_timeout_seconds: float = 12.0
     price_request_max_retries: int = 3

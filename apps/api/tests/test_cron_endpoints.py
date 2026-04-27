@@ -28,6 +28,31 @@ class FakeCronRunner:
     async def fundamentals_refresh(self) -> dict[str, Any]:
         return {"status": "PARTIAL", "jobs": {"refresh-fundamentals": {"status": "PARTIAL"}}}
 
+    async def hobby_data_refresh(self) -> dict[str, Any]:
+        return {
+            "status": "SUCCESS",
+            "mode": "hobby_safe_rotating_data_refresh",
+            "selected_job": "refresh-prices",
+            "jobs": {"refresh-prices": {"status": "SUCCESS"}},
+        }
+
+    async def hobby_analysis(self) -> dict[str, Any]:
+        return {
+            "status": "PARTIAL",
+            "mode": "hobby_safe_batched_analysis",
+            "jobs": {
+                "analyze-live": {
+                    "status": "SUCCESS",
+                    "batch_size": 3,
+                    "batch_stock_slugs": ["catl", "byd", "xiaomi"],
+                },
+                "score-universe": {
+                    "status": "SKIPPED",
+                    "reason": "analysis_batches_not_complete",
+                },
+            },
+        }
+
     async def analyze_and_score(self) -> dict[str, Any]:
         return {"status": "SKIPPED", "reason": "required_refresh_inputs_not_ready"}
 
@@ -42,6 +67,9 @@ class FakeCronRunner:
 
     async def analyze_live(self) -> dict[str, Any]:
         return {"status": "SUCCESS"}
+
+    async def analyze_live_batch(self) -> dict[str, Any]:
+        return {"status": "SUCCESS", "batch_size": 3}
 
     def score_universe(self) -> dict[str, Any]:
         return {"status": "SUCCESS"}
@@ -107,6 +135,45 @@ def test_cron_endpoint_returns_207_for_partial(monkeypatch) -> None:
 
     assert response.status_code == 207
     assert response.json()["status"] == "PARTIAL"
+
+
+def test_cron_endpoint_runs_authorized_hobby_data_refresh(monkeypatch) -> None:
+    monkeypatch.setattr(
+        cron_endpoint,
+        "get_settings",
+        lambda: Settings(cron_secret="test-secret"),
+    )
+    monkeypatch.setattr(cron_endpoint, "CronRefreshRunner", FakeCronRunner)
+
+    response = TestClient(app).get(
+        "/api/v1/cron/hobby-data-refresh",
+        headers={"Authorization": "Bearer test-secret"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["job"] == "hobby-data-refresh"
+    assert payload["mode"] == "hobby_safe_rotating_data_refresh"
+    assert payload["selected_job"] == "refresh-prices"
+
+
+def test_cron_endpoint_runs_authorized_hobby_analysis(monkeypatch) -> None:
+    monkeypatch.setattr(
+        cron_endpoint,
+        "get_settings",
+        lambda: Settings(cron_secret="test-secret"),
+    )
+    monkeypatch.setattr(cron_endpoint, "CronRefreshRunner", FakeCronRunner)
+
+    response = TestClient(app).get(
+        "/api/v1/cron/hobby-analysis",
+        headers={"Authorization": "Bearer test-secret"},
+    )
+
+    assert response.status_code == 207
+    payload = response.json()
+    assert payload["job"] == "hobby-analysis"
+    assert payload["jobs"]["analyze-live"]["batch_size"] == 3
 
 
 def test_cron_endpoint_returns_202_for_skipped(monkeypatch) -> None:

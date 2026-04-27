@@ -17,7 +17,7 @@ The app is feature-complete for the competition demo and prepared for GitHub + V
 - Configurable real fundamentals ingestion via AkShare / Eastmoney / Baidu with mock fallback
 - Configurable real announcement ingestion via CNInfo with mock fallback
 - Live AI analysis pipeline with deterministic structured artifacts and evidence references
-- Vercel Cron endpoints for production data refresh without an always-on scheduler
+- Vercel Hobby-safe cron endpoints for production data refresh without an always-on scheduler
 - CLI commands for universe seeding and mock refresh ingestion
 - Transparent weighted scoring and long/short recommendation selection
 - Dashboard, stock detail, compare, methodology, recommendation, summary, and admin status pages
@@ -152,7 +152,7 @@ This repo is designed for two Vercel projects from the same GitHub monorepo:
 - Frontend project Root Directory: `apps/web`
 - Backend project Root Directory: `apps/api`
 
-Production refresh is handled by Vercel Cron Jobs against protected FastAPI cron endpoints. The local scheduler is still available for local development, but production does not depend on an always-on process.
+Production refresh is handled by Vercel Cron Jobs against protected FastAPI cron endpoints. The default `apps/api/vercel.json` stays within Vercel Hobby constraints by capping `maxDuration` at 300 seconds and scheduling two small rotating/batched cron routes instead of one long all-in-one refresh. The local scheduler is still available for local development, but production does not depend on an always-on process.
 
 See [docs/deployment.md](docs/deployment.md) for the full GitHub publishing checklist, Vercel environment variables, cron schedules, and deployment steps.
 

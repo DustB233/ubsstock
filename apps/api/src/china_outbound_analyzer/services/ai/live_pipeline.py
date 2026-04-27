@@ -360,10 +360,12 @@ class LiveAIAnalysisService:
         job_name: str = "analyze-live",
         refresh_job: RefreshJob | None = None,
         stale_after_seconds: int | None = None,
-    ) -> dict[str, int | str]:
+        stock_slugs: Sequence[str] | None = None,
+    ) -> dict[str, Any]:
         stale_after_seconds = (
             stale_after_seconds or self.settings.scheduler_running_job_stale_after_seconds
         )
+        requested_stock_slugs = list(dict.fromkeys(stock_slugs or []))
         refresh_job = refresh_job or start_job_run(
             self.session,
             job_name=job_name,
@@ -374,6 +376,7 @@ class LiveAIAnalysisService:
                 "phase": "ai_analysis",
                 "mode": self.settings.ai_analysis_provider,
                 "prompt_version": PROMPT_VERSION,
+                "stock_slugs": requested_stock_slugs or "all",
             },
         )
         if refresh_job is None:
@@ -383,7 +386,10 @@ class LiveAIAnalysisService:
                 "reason": "job_already_running",
             }
 
-        stocks = self.session.scalars(select(Stock).order_by(Stock.company_name)).all()
+        stock_query = select(Stock).order_by(Stock.company_name)
+        if requested_stock_slugs:
+            stock_query = stock_query.where(Stock.slug.in_(requested_stock_slugs))
+        stocks = self.session.scalars(stock_query).all()
         counts = {
             "symbols": 0,
             "artifacts": 0,
@@ -391,6 +397,7 @@ class LiveAIAnalysisService:
             "fallback_symbols": 0,
             "partial_symbols": 0,
             "failed_symbols": 0,
+            "requested_symbols": len(requested_stock_slugs) or len(stocks),
         }
         failures: list[str] = []
 

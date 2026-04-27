@@ -78,6 +78,7 @@ CRON_PRICES_LOOKBACK_DAYS=400
 CRON_NEWS_LIMIT=10
 CRON_ANNOUNCEMENTS_LIMIT=12
 CRON_ANNOUNCEMENTS_LOOKBACK_DAYS=365
+CRON_AI_BATCH_SIZE=3
 SCHEDULER_RUNNING_JOB_STALE_AFTER_SECONDS=7200
 ```
 
@@ -104,13 +105,20 @@ The production frontend intentionally does not fall back to localhost. If these 
 
 ## 4. Vercel Cron Jobs
 
-The backend project defines these production schedules:
+The backend project is configured for Vercel Hobby limits by default:
+
+- `maxDuration` is capped at `300` seconds in `apps/api/vercel.json`.
+- Only two cron schedules are defined, which keeps the project within the Hobby cron-job limit.
+- Long workflows are split into rotating/batched endpoints instead of one oversized function invocation.
+
+The scheduled production cron jobs are:
 
 | Path | Schedule | Purpose |
 | --- | --- | --- |
-| `/api/v1/cron/daily-refresh` | `30 10 * * 1-5` | Weekday price, news, and announcement refresh after China/HK market close |
-| `/api/v1/cron/fundamentals` | `15 11 * * *` | Daily valuation and financial snapshot refresh |
-| `/api/v1/cron/analyze-score` | `0 12 * * *` | Daily live AI thesis generation followed by score/recommendation refresh |
+| `/api/v1/cron/hobby-data-refresh` | `30 10 * * *` | Runs one stale data refresh per invocation: prices, news, announcements, or fundamentals |
+| `/api/v1/cron/hobby-analysis` | `30 11 * * *` | Runs the next AI analysis batch, then scores once all 15 stocks have analysis for the latest complete data cycle; if data inputs are missing, this slot performs the next data catch-up refresh instead |
+
+This is intentionally conservative for the free/Hobby plan. It keeps automatic refresh enabled with no post-deploy commands, but full universe refreshes may complete over multiple scheduled invocations. On a brand-new database, the two daily cron slots first catch up prices, news, announcements, and fundamentals, then progress through AI analysis batches and scoring. Increase `CRON_AI_BATCH_SIZE` only if your provider calls reliably finish below 300 seconds.
 
 Additional protected endpoints are available for targeted cron/manual operations if needed:
 
@@ -120,7 +128,9 @@ Additional protected endpoints are available for targeted cron/manual operations
 - `/api/v1/cron/announcements`
 - `/api/v1/cron/fundamentals`
 - `/api/v1/cron/analyze-live`
+- `/api/v1/cron/analyze-live-batch`
 - `/api/v1/cron/score-universe`
+- `/api/v1/cron/daily-refresh`
 - `/api/v1/cron/analyze-score`
 
 All cron routes require:
@@ -137,7 +147,7 @@ The cron runner:
 - Seeds the fixed universe before refreshes.
 - Reuses existing `refresh_jobs` locking to prevent overlapping runs.
 - Treats refresh services as idempotent upserts.
-- Runs scoring only after live analysis exists.
+- Runs scoring only after all active stocks have live analysis for the latest complete data cycle.
 - Skips analysis if required price/news/announcement/fundamental refreshes have never completed.
 
 ## 5. Local Commands

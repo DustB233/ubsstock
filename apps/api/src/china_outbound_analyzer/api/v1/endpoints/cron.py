@@ -136,6 +136,19 @@ async def cron_daily_refresh(
     )
 
 
+@router.get("/hobby-data-refresh")
+async def cron_hobby_data_refresh(
+    response: Response,
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
+    return await _run_cron_job(
+        job_name="hobby-data-refresh",
+        authorization=authorization,
+        response=response,
+        runner_fn=lambda runner: asyncio.run(runner.hobby_data_refresh()),
+    )
+
+
 @router.get("/analyze-live")
 async def cron_analyze_live(
     response: Response,
@@ -149,6 +162,19 @@ async def cron_analyze_live(
     )
 
 
+@router.get("/analyze-live-batch")
+async def cron_analyze_live_batch(
+    response: Response,
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
+    return await _run_cron_job(
+        job_name="analyze-live-batch",
+        authorization=authorization,
+        response=response,
+        runner_fn=lambda runner: asyncio.run(runner.analyze_live_batch()),
+    )
+
+
 @router.get("/score-universe")
 async def cron_score_universe(
     response: Response,
@@ -159,6 +185,19 @@ async def cron_score_universe(
         authorization=authorization,
         response=response,
         runner_fn=lambda runner: runner.score_universe(),
+    )
+
+
+@router.get("/hobby-analysis")
+async def cron_hobby_analysis(
+    response: Response,
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
+    return await _run_cron_job(
+        job_name="hobby-analysis",
+        authorization=authorization,
+        response=response,
+        runner_fn=lambda runner: asyncio.run(runner.hobby_analysis()),
     )
 
 
