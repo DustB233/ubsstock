@@ -118,16 +118,16 @@ The backend project is configured for Vercel Hobby deployment by default:
 - `apps/api/vercel.json` does not declare `builds`, `functions`, or `maxDuration`; Vercel auto-detects `apps/api/api/index.py` as the Python serverless function.
 - Cron configuration lives in `apps/api/vercel.json`, because the backend Vercel project Root Directory is `apps/api`.
 - Only two cron schedules are defined, which keeps the project within the Hobby cron-job limit.
-- `/api/v1/cron/fundamentals-analyze-score` combines the post-data fundamentals and AI/scoring steps so the deployment stays automatic without requiring a third Hobby cron job.
+- AI analysis and scoring are intentionally not scheduled on Hobby; run `/api/v1/cron/analyze-score` manually when you want to refresh the final thesis/recommendations.
 
 The scheduled production cron jobs are:
 
 | Path | Schedule | Purpose |
 | --- | --- | --- |
 | `/api/v1/cron/daily-refresh` | `30 10 * * *` | Daily price, news, and announcement refresh after China/HK market close |
-| `/api/v1/cron/fundamentals-analyze-score` | `30 11 * * *` | Daily fundamentals refresh, then live AI analysis and recommendation scoring |
+| `/api/v1/cron/fundamentals` | `30 11 * * *` | Daily fundamentals and valuation refresh |
 
-This is intentionally conservative for the free/Hobby plan. Vercel Hobby supports two cron jobs, so the individual `/api/v1/cron/fundamentals` and `/api/v1/cron/analyze-score` endpoints remain available for manual testing while the scheduled production path combines them. If `/api/v1/cron/fundamentals-analyze-score` exceeds Hobby function duration in production, switch the second schedule back to `/api/v1/cron/hobby-analysis` or upgrade the cron/function limits.
+This is intentionally conservative for the free/Hobby plan. Vercel Hobby supports two cron jobs, so production auto-refresh covers market/news/announcement data plus fundamentals. The `/api/v1/cron/analyze-score` endpoint remains available for manual testing, but it is not scheduled automatically.
 
 Additional protected endpoints are available for targeted cron/manual operations if needed:
 
@@ -141,7 +141,6 @@ Additional protected endpoints are available for targeted cron/manual operations
 - `/api/v1/cron/score-universe`
 - `/api/v1/cron/daily-refresh`
 - `/api/v1/cron/analyze-score`
-- `/api/v1/cron/fundamentals-analyze-score`
 
 All cron routes require:
 
@@ -168,7 +167,6 @@ curl "$API_URL/api/v1/cron/bootstrap" -H "Authorization: Bearer $CRON_SECRET"
 curl "$API_URL/api/v1/cron/daily-refresh" -H "Authorization: Bearer $CRON_SECRET"
 curl "$API_URL/api/v1/cron/fundamentals" -H "Authorization: Bearer $CRON_SECRET"
 curl "$API_URL/api/v1/cron/analyze-score" -H "Authorization: Bearer $CRON_SECRET"
-curl "$API_URL/api/v1/cron/fundamentals-analyze-score" -H "Authorization: Bearer $CRON_SECRET"
 ```
 
 To verify automatic cron registration in Vercel:
@@ -176,8 +174,8 @@ To verify automatic cron registration in Vercel:
 1. Open the backend Vercel project, not the frontend project.
 2. Confirm the project Root Directory is `apps/api`.
 3. Open Settings, then Environment Variables, and confirm `CRON_SECRET` exists for Production.
-4. Open the latest Production Deployment and check the Functions or Cron Jobs panel for `/api/v1/cron/daily-refresh` and `/api/v1/cron/fundamentals-analyze-score`.
-5. After the scheduled UTC window passes, inspect deployment logs for `Starting Vercel cron job daily-refresh` and `Starting Vercel cron job fundamentals-analyze-score`.
+4. Open the latest Production Deployment and check the Functions or Cron Jobs panel for `/api/v1/cron/daily-refresh` and `/api/v1/cron/fundamentals`.
+5. After the scheduled UTC window passes, inspect deployment logs for `Starting Vercel cron job daily-refresh` and `Starting Vercel cron job refresh-fundamentals`.
 
 ## 5. Local Commands
 

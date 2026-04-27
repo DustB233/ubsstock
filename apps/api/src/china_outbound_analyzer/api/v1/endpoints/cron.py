@@ -212,16 +212,3 @@ async def cron_analyze_score(
         response=response,
         runner_fn=lambda runner: asyncio.run(runner.analyze_and_score()),
     )
-
-
-@router.get("/fundamentals-analyze-score")
-async def cron_fundamentals_analyze_score(
-    response: Response,
-    authorization: str | None = Header(default=None),
-) -> dict[str, Any]:
-    return await _run_cron_job(
-        job_name="fundamentals-analyze-score",
-        authorization=authorization,
-        response=response,
-        runner_fn=lambda runner: asyncio.run(runner.fundamentals_analyze_and_score()),
-    )

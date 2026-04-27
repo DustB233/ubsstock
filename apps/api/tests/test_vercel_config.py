@@ -16,8 +16,9 @@ def test_vercel_config_uses_auto_detected_python_function() -> None:
     assert len(config.get("crons", [])) <= 2
     assert config["crons"] == [
         {"path": "/api/v1/cron/daily-refresh", "schedule": "30 10 * * *"},
-        {"path": "/api/v1/cron/fundamentals-analyze-score", "schedule": "30 11 * * *"},
+        {"path": "/api/v1/cron/fundamentals", "schedule": "30 11 * * *"},
     ]
+    assert all(cron["path"] != "/api/v1/cron/analyze-score" for cron in config["crons"])
 
 
 def test_vercel_cron_paths_are_get_routes() -> None:

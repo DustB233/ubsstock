@@ -280,52 +280,6 @@ class CronRefreshRunner:
             },
         }
 
-    async def fundamentals_analyze_and_score(self) -> dict[str, Any]:
-        bootstrap = self.bootstrap()
-        fundamentals = await self.refresh_fundamentals()
-        if fundamentals.get("status") == "FAILED":
-            return {
-                "status": "FAILED",
-                "bootstrap": bootstrap,
-                "jobs": {
-                    "refresh-fundamentals": fundamentals,
-                    "analyze-live": {
-                        "status": "SKIPPED",
-                        "reason": "fundamentals_did_not_complete",
-                    },
-                    "score-universe": {
-                        "status": "SKIPPED",
-                        "reason": "fundamentals_did_not_complete",
-                    },
-                },
-            }
-
-        analysis = await self.analyze_live()
-        if analysis.get("status") in {"FAILED", "SKIPPED"}:
-            return {
-                "status": self._rollup_status([fundamentals, analysis]),
-                "bootstrap": bootstrap,
-                "jobs": {
-                    "refresh-fundamentals": fundamentals,
-                    "analyze-live": analysis,
-                    "score-universe": {
-                        "status": "SKIPPED",
-                        "reason": "analysis_did_not_complete",
-                    },
-                },
-            }
-
-        scoring = self.score_universe()
-        return {
-            "status": self._rollup_status([fundamentals, analysis, scoring]),
-            "bootstrap": bootstrap,
-            "jobs": {
-                "refresh-fundamentals": fundamentals,
-                "analyze-live": analysis,
-                "score-universe": scoring,
-            },
-        }
-
     def _run_migrations(self) -> None:
         logger.info("Applying Alembic migrations before cron refresh.")
         alembic_config = Config(str(ALEMBIC_INI))

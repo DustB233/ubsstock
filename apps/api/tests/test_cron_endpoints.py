@@ -56,16 +56,6 @@ class FakeCronRunner:
     async def analyze_and_score(self) -> dict[str, Any]:
         return {"status": "SKIPPED", "reason": "required_refresh_inputs_not_ready"}
 
-    async def fundamentals_analyze_and_score(self) -> dict[str, Any]:
-        return {
-            "status": "SUCCESS",
-            "jobs": {
-                "refresh-fundamentals": {"status": "SUCCESS"},
-                "analyze-live": {"status": "SUCCESS"},
-                "score-universe": {"status": "SUCCESS"},
-            },
-        }
-
     async def refresh_prices(self) -> dict[str, Any]:
         return {"status": "SUCCESS"}
 
@@ -203,27 +193,6 @@ def test_cron_endpoint_returns_202_for_skipped(monkeypatch) -> None:
     assert response.json()["status"] == "SKIPPED"
 
 
-def test_cron_endpoint_runs_authorized_fundamentals_analyze_score(monkeypatch) -> None:
-    monkeypatch.setattr(
-        cron_endpoint,
-        "get_settings",
-        lambda: Settings(cron_secret="test-secret"),
-    )
-    monkeypatch.setattr(cron_endpoint, "CronRefreshRunner", FakeCronRunner)
-
-    response = TestClient(app).get(
-        "/api/v1/cron/fundamentals-analyze-score",
-        headers={"Authorization": "Bearer test-secret"},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["job"] == "fundamentals-analyze-score"
-    assert payload["jobs"]["refresh-fundamentals"]["status"] == "SUCCESS"
-    assert payload["jobs"]["analyze-live"]["status"] == "SUCCESS"
-    assert payload["jobs"]["score-universe"]["status"] == "SUCCESS"
-
-
 def test_cron_endpoints_are_get_only(monkeypatch) -> None:
     monkeypatch.setattr(
         cron_endpoint,
@@ -236,7 +205,6 @@ def test_cron_endpoints_are_get_only(monkeypatch) -> None:
         "/api/v1/cron/daily-refresh",
         "/api/v1/cron/fundamentals",
         "/api/v1/cron/analyze-score",
-        "/api/v1/cron/fundamentals-analyze-score",
     ]:
         response = client.post(path, headers={"Authorization": "Bearer test-secret"})
         assert response.status_code == 405
