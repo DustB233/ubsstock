@@ -1,11 +1,12 @@
 import json
 from functools import lru_cache
-from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from typing import Annotated, Any
+from urllib.parse import parse_qsl, unquote, urlsplit
 
 from pydantic import AliasChoices, Field
 from pydantic.functional_validators import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+from sqlalchemy.engine import URL, make_url
 
 
 def _normalize_postgres_url(value: str, *, async_driver: bool) -> str:
@@ -14,38 +15,67 @@ def _normalize_postgres_url(value: str, *, async_driver: bool) -> str:
         normalized = "postgresql://" + normalized.removeprefix("postgres://")
 
     driver = "postgresql+asyncpg://" if async_driver else "postgresql+psycopg://"
-    for prefix in (
-        "postgresql://",
-        "postgresql+asyncpg://",
-        "postgresql+psycopg://",
-        "postgresql+psycopg2://",
-    ):
+    driver_name = driver.removesuffix("://")
+    for prefix in _POSTGRES_URL_PREFIXES:
         if normalized.startswith(prefix):
-            normalized = driver + normalized.removeprefix(prefix)
+            normalized = _build_postgres_url(normalized, driver_name).render_as_string(
+                hide_password=False
+            )
             break
-
-    if async_driver:
-        normalized = _normalize_asyncpg_ssl_query(normalized)
 
     return normalized
 
 
-def _normalize_asyncpg_ssl_query(value: str) -> str:
-    parts = urlsplit(value)
-    query_items = parse_qsl(parts.query, keep_blank_values=True)
-    if not any(key == "sslmode" for key, _ in query_items):
-        return value
+_POSTGRES_URL_PREFIXES = (
+    "postgresql://",
+    "postgresql+asyncpg://",
+    "postgresql+psycopg://",
+    "postgresql+psycopg2://",
+)
 
-    has_ssl = any(key == "ssl" for key, _ in query_items)
-    rewritten_query: list[tuple[str, str]] = []
-    for key, item_value in query_items:
-        if key == "sslmode":
-            if not has_ssl:
-                rewritten_query.append(("ssl", item_value))
-            continue
-        rewritten_query.append((key, item_value))
 
-    return urlunsplit(parts._replace(query=urlencode(rewritten_query)))
+def _build_postgres_url(value: str, driver_name: str) -> URL:
+    _, _, remainder = value.partition("://")
+    if "@" not in remainder:
+        url = make_url(value)
+        return url.set(
+            drivername=driver_name,
+            query=_normalize_ssl_query(url.query, async_driver=driver_name.endswith("asyncpg")),
+        )
+
+    auth_part, host_part = remainder.rsplit("@", 1)
+    username, has_password, password = auth_part.partition(":")
+    host_url = urlsplit(f"//{host_part}")
+
+    return URL.create(
+        drivername=driver_name,
+        username=unquote(username) if username else None,
+        password=unquote(password) if has_password else None,
+        host=host_url.hostname,
+        port=host_url.port,
+        database=unquote(host_url.path.lstrip("/")) or None,
+        query=_normalize_ssl_query(
+            dict(parse_qsl(host_url.query, keep_blank_values=True)),
+            async_driver=driver_name.endswith("asyncpg"),
+        ),
+    )
+
+
+def _normalize_ssl_query(query: dict[str, Any], *, async_driver: bool) -> dict[str, Any]:
+    normalized = {str(key): str(value) for key, value in dict(query).items()}
+    ssl_value = normalized.get("ssl")
+    sslmode_value = normalized.get("sslmode")
+
+    if async_driver:
+        if ssl_value is None and sslmode_value is not None:
+            normalized["ssl"] = sslmode_value
+        normalized.pop("sslmode", None)
+        return normalized
+
+    if sslmode_value is None and ssl_value is not None:
+        normalized["sslmode"] = ssl_value
+    normalized.pop("ssl", None)
+    return normalized
 
 
 class Settings(BaseSettings):
@@ -61,7 +91,7 @@ class Settings(BaseSettings):
         default="postgresql+psycopg://postgres:postgres@localhost:5432/china_outbound",
         validation_alias=AliasChoices("SYNC_DATABASE_URL", "DATABASE_URL", "POSTGRES_URL"),
     )
-    cors_origins: list[str] = [
+    cors_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
